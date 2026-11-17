@@ -1,4 +1,4 @@
-// Step 1: draw the dark wall and the lantern. Light comes later!
+// Step 2: paint soft glowing light patches on the wall.
 var canvas = document.getElementById('scene');
 var ctx = canvas.getContext('2d');
 
@@ -10,8 +10,8 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   drawWall(w, h);
-  // lantern size depends on the smaller side so it fits on a phone
   var s = Math.min(w, h) / 400;
+  drawPatches(w, h, s);
   drawLantern(w / 2, h * 0.5, s);
 }
 
@@ -40,6 +40,44 @@ function drawWall(w, h) {
   }
 }
 
+// One soft blob of light: a radial gradient that fades to nothing
+function blob(x, y, r, rgb, a) {
+  var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, 'rgba(' + rgb + ',' + a + ')');
+  g.addColorStop(0.5, 'rgba(' + rgb + ',' + (a * 0.4) + ')');
+  g.addColorStop(1, 'rgba(' + rgb + ',0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+// Light patches spread over the wall, brightest near the lantern.
+// 'lighter' blending makes overlapping patches add up and glow.
+function drawPatches(w, h, s) {
+  var cx = w / 2, cy = h * 0.5;
+  var u = Math.min(w, h);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // big warm wash around the lantern
+  blob(cx, cy, u * 0.9, '255,170,80', 0.35);
+
+  // patches: [dx, dy, radius, colour, strength] relative to lantern, in units of u
+  var P = [
+    [-0.55, -0.30, 0.28, '255,190,90', 0.30],
+    [0.50, -0.35, 0.24, '255,140,110', 0.28],
+    [-0.45, 0.30, 0.22, '255,210,120', 0.26],
+    [0.55, 0.28, 0.30, '255,160,70', 0.28],
+    [0.05, -0.48, 0.20, '255,220,150', 0.22],
+    [0.02, 0.50, 0.24, '240,150,90', 0.22],
+    [-0.85, 0.02, 0.22, '230,140,100', 0.18],
+    [0.88, -0.02, 0.22, '255,200,110', 0.18]
+  ];
+  P.forEach(function (p) {
+    blob(cx + p[0] * u, cy + p[1] * u, p[2] * u, p[3], p[4]);
+  });
+  ctx.restore();
+}
+
 // The lantern, drawn around (cx, cy) with scale s
 function drawLantern(cx, cy, s) {
   ctx.save();
@@ -48,7 +86,6 @@ function drawLantern(cx, cy, s) {
 
   var metal = '#1b171c', rim = '#4a4048';
 
-  // hanging chain from the top of the screen
   ctx.strokeStyle = rim;
   ctx.lineWidth = 3;
   for (var i = -cy / s; i < -112; i += 12) {
@@ -57,7 +94,6 @@ function drawLantern(cx, cy, s) {
     ctx.stroke();
   }
 
-  // top ring and roof
   ctx.strokeStyle = rim;
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -76,7 +112,6 @@ function drawLantern(cx, cy, s) {
   ctx.fill();
   ctx.stroke();
 
-  // glass body: warm gradient
   var glass = ctx.createLinearGradient(0, -62, 0, 70);
   glass.addColorStop(0, '#ffd27a');
   glass.addColorStop(0.5, '#ffb347');
@@ -90,7 +125,6 @@ function drawLantern(cx, cy, s) {
   ctx.closePath();
   ctx.fill();
 
-  // the flame and its little glow
   var glow = ctx.createRadialGradient(0, 10, 2, 0, 10, 55);
   glow.addColorStop(0, 'rgba(255,255,220,0.9)');
   glow.addColorStop(1, 'rgba(255,200,100,0)');
@@ -104,11 +138,9 @@ function drawLantern(cx, cy, s) {
   ctx.quadraticCurveTo(-14, 8, 0, -22);
   ctx.fill();
 
-  // candle under the flame
   ctx.fillStyle = '#efe6d2';
   ctx.fillRect(-7, 30, 14, 40);
 
-  // metal frame bars over the glass
   ctx.strokeStyle = metal;
   ctx.lineWidth = 5;
   [-52, -17, 17, 52].forEach(function (x) {
@@ -118,7 +150,6 @@ function drawLantern(cx, cy, s) {
     ctx.stroke();
   });
 
-  // base
   ctx.fillStyle = metal;
   ctx.strokeStyle = rim;
   ctx.lineWidth = 2;
