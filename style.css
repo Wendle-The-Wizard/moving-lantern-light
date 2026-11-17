@@ -1,0 +1,12 @@
+/* Wendle's dark wall: the canvas fills the whole page */
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0d0b10;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
