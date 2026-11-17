@@ -1,4 +1,4 @@
-// Step 3: the light patches drift and sway slowly.
+// Step 4: the light changes colour gently, and the motion is bigger so you can see it.
 var canvas = document.getElementById('scene');
 var ctx = canvas.getContext('2d');
 var W = 0, H = 0, DPR = 1;
@@ -25,7 +25,7 @@ function drawWall(c, w, h) {
   g.addColorStop(1, '#0a080d');
   c.fillStyle = g;
   c.fillRect(0, 0, w, h);
-  c.strokeStyle = 'rgba(255,255,255,0.04)';
+  c.strokeStyle = 'rgba(255,255,255,0.05)';
   c.lineWidth = 1;
   var bh = 40, bw = 90, row = 0;
   for (var y = 0; y < h; y += bh, row++) {
@@ -42,27 +42,32 @@ function drawWall(c, w, h) {
   }
 }
 
-// One soft blob of light: a radial gradient that fades to nothing
-function blob(x, y, r, rgb, a) {
+// Turn a hue (0-360) into an rgb string; I keep it soft and bright
+function hsl(h, s, l) {
+  return 'hsl(' + Math.round(h) + ',' + s + '%,' + l + '%)';
+}
+
+// One soft blob of light: a radial gradient that fades to nothing.
+// hue is turned into rgba by using hsla strings.
+function blob(x, y, r, hue, a) {
   var g = ctx.createRadialGradient(x, y, 0, x, y, r);
-  g.addColorStop(0, 'rgba(' + rgb + ',' + a + ')');
-  g.addColorStop(0.5, 'rgba(' + rgb + ',' + (a * 0.4) + ')');
-  g.addColorStop(1, 'rgba(' + rgb + ',0)');
+  g.addColorStop(0, 'hsla(' + Math.round(hue) + ',90%,62%,' + a + ')');
+  g.addColorStop(0.5, 'hsla(' + Math.round(hue) + ',90%,55%,' + (a * 0.4) + ')');
+  g.addColorStop(1, 'hsla(' + Math.round(hue) + ',90%,50%,0)');
   ctx.fillStyle = g;
   ctx.fillRect(x - r, y - r, r * 2, r * 2);
 }
 
-// patches: [dx, dy, radius, colour, strength] in units of u, plus
-// sway: [speedX, speedY, phase, amount] so each one moves on its own rhythm
+// patches: [dx, dy, radius, baseHue, strength, speedX, speedY, phase, sway]
 var P = [
-  [-0.55, -0.30, 0.28, '255,190,90', 0.30, 0.11, 0.07, 0.0, 0.06],
-  [0.50, -0.35, 0.24, '255,140,110', 0.28, 0.08, 0.13, 1.7, 0.07],
-  [-0.45, 0.30, 0.22, '255,210,120', 0.26, 0.14, 0.09, 3.1, 0.06],
-  [0.55, 0.28, 0.30, '255,160,70', 0.28, 0.06, 0.1, 4.4, 0.08],
-  [0.05, -0.48, 0.20, '255,220,150', 0.22, 0.12, 0.05, 2.2, 0.05],
-  [0.02, 0.50, 0.24, '240,150,90', 0.22, 0.09, 0.12, 5.3, 0.06],
-  [-0.85, 0.02, 0.22, '230,140,100', 0.18, 0.07, 0.11, 0.9, 0.07],
-  [0.88, -0.02, 0.22, '255,200,110', 0.18, 0.1, 0.08, 3.8, 0.07]
+  [-0.55, -0.30, 0.28, 38, 0.30, 0.35, 0.25, 0.0, 0.10],
+  [0.50, -0.35, 0.24, 12, 0.28, 0.28, 0.40, 1.7, 0.11],
+  [-0.45, 0.30, 0.22, 48, 0.26, 0.45, 0.30, 3.1, 0.10],
+  [0.55, 0.28, 0.30, 28, 0.28, 0.22, 0.33, 4.4, 0.12],
+  [0.05, -0.48, 0.20, 52, 0.22, 0.38, 0.20, 2.2, 0.09],
+  [0.02, 0.50, 0.24, 20, 0.22, 0.30, 0.38, 5.3, 0.10],
+  [-0.85, 0.02, 0.22, 8, 0.18, 0.25, 0.35, 0.9, 0.10],
+  [0.88, -0.02, 0.22, 44, 0.18, 0.33, 0.27, 3.8, 0.10]
 ];
 
 function drawPatches(t) {
@@ -70,15 +75,16 @@ function drawPatches(t) {
   var u = Math.min(W, H);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  // the big wash breathes very gently
-  blob(cx, cy, u * (0.9 + 0.02 * Math.sin(t * 0.5)), '255,170,80', 0.35);
-  P.forEach(function (p) {
-    // slow sine drift in x and y, a little size pulse and a soft fade
+  // the big wash breathes and slowly wanders through warm hues
+  blob(cx, cy, u * (0.9 + 0.04 * Math.sin(t * 0.7)), 32 + 14 * Math.sin(t * 0.15), 0.32);
+  P.forEach(function (p, i) {
     var dx = p[0] + p[8] * Math.sin(t * p[5] + p[7]);
     var dy = p[1] + p[8] * Math.cos(t * p[6] + p[7] * 1.3);
-    var r = p[2] * (1 + 0.08 * Math.sin(t * 0.3 + p[7]));
-    var a = p[4] * (0.85 + 0.15 * Math.sin(t * 0.4 + p[7] * 2));
-    blob(cx + dx * u, cy + dy * u, r * u, p[3], a);
+    var r = p[2] * (1 + 0.1 * Math.sin(t * 0.5 + p[7]));
+    var a = p[4] * (0.8 + 0.2 * Math.sin(t * 0.6 + p[7] * 2));
+    // each patch drifts around its own hue: gold, rose, teal and violet tints come and go
+    var hue = p[3] + 150 * Math.sin(t * 0.08 + p[7]) * (0.5 + 0.5 * Math.sin(t * 0.05 + i));
+    blob(cx + dx * u, cy + dy * u, r * u, (hue + 360) % 360, a);
   });
   ctx.restore();
 }
@@ -113,10 +119,12 @@ function drawLantern(cx, cy, s, t) {
   ctx.fill();
   ctx.stroke();
 
+  // the glass is gently tinted by the same slow colour
+  var gh = 38 + 25 * Math.sin(t * 0.15);
   var glass = ctx.createLinearGradient(0, -62, 0, 70);
-  glass.addColorStop(0, '#ffd27a');
-  glass.addColorStop(0.5, '#ffb347');
-  glass.addColorStop(1, '#c8742a');
+  glass.addColorStop(0, hsl(gh + 5, 100, 74));
+  glass.addColorStop(0.5, hsl(gh, 100, 63));
+  glass.addColorStop(1, hsl(gh - 8, 70, 44));
   ctx.fillStyle = glass;
   ctx.beginPath();
   ctx.moveTo(-52, -62);
@@ -132,8 +140,8 @@ function drawLantern(cx, cy, s, t) {
   ctx.fillStyle = glow;
   ctx.fillRect(-60, -50, 120, 120);
 
-  // the flame wobbles a tiny bit, just for fun
-  var sway = Math.sin(t * 2.1) * 2;
+  // the flame flickers
+  var sway = Math.sin(t * 2.1) * 3 + Math.sin(t * 5.3) * 1.2;
   ctx.fillStyle = '#fff6c8';
   ctx.beginPath();
   ctx.moveTo(sway, -22);
@@ -167,7 +175,15 @@ function frame(ms) {
   ctx.drawImage(wallCanvas, 0, 0);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   drawPatches(t);
-  drawLantern(W / 2, H * 0.5, Math.min(W, H) / 400, t);
+  // the whole lantern swings a little on its chain
+  var swing = Math.sin(t * 0.9) * 0.03;
+  var s = Math.min(W, H) / 400;
+  ctx.save();
+  ctx.translate(W / 2, 0);
+  ctx.rotate(swing);
+  ctx.translate(-W / 2, 0);
+  drawLantern(W / 2, H * 0.5, s, t);
+  ctx.restore();
   requestAnimationFrame(frame);
 }
 
