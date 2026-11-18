@@ -177,7 +177,7 @@ function drawLantern(cx, cy, s, t) {
 
 function frame(ms) {
   var t = ms / 1000;
-  var dt = Math.min(0.1, (ms - lastMs) / 1000);
+  var dt = Math.min(0.1, Math.max(0, (ms - lastMs) / 1000));
   lastMs = ms;
   // the extra brightness fades back slowly, like a flame settling
   boost = Math.max(0, boost - dt * 0.35);
